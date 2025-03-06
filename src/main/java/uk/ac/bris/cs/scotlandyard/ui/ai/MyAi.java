@@ -58,46 +58,47 @@ public class MyAi implements Ai {
 
 	@Nonnull @Override public String name() { return "Doofenshmirtz"; }
 
-
-	public Pair<Move, Integer> minimax(Board.GameState gs, Move move, Integer depth, boolean mrXTurn ){
-		// No DOUBLE remaining. why?
-		// See the tickets used and tickets available by this game state and the following one
-
-		//Create a copy of game state so that we can run advance on it, while also retaining original state.
-		Board.GameState copyState	=  constructGameState(gs);
+	public Pair<Move, Integer> minimax(MirrorGameState gs, Move move, Integer depth){
 
 		//We need to reassess this move.source() thing. Aside from that, miniMax works.
 		if (depth == 0){
-			return new Pair<> (move, score(gs,move.source()));
+			System.out.println("Depth is 0");
+			System.out.println(new Pair<Move, Integer>(move, score(gs, gs.getMrX().location())));
+			return new Pair<Move, Integer>(move, score(gs, gs.getMrX().location()));
 		}
-
-		if (depth == 7){
+		// (?) prolly need to add a condition if depth != 0 cos of the above the if statement
+		else if (depth % 6 == 0){
+			System.out.println();
 			Integer maxEval = -9999;
-			Pair<Move, Integer> bestEval = new Pair<>(move,maxEval);
-			for (Move m: gs.getAvailableMoves()){
-				Pair<Move, Integer> eval = minimax(copyState.advance(m), m, depth-1, false);
-				if (eval.right() > bestEval.right()) {
-					bestEval = eval;
+			Move bestMove = gs.getAvailableMoves().asList().get(0);
+			for (Move newMove: gs.getAvailableMoves()){
+				//make a copy
+				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
+				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,depth-1);
+				if (currentEval.right()>maxEval){
+					maxEval = currentEval.right();
+					bestMove = currentEval.left();
 				}
-				copyState = constructGameState(gs);
 			}
-			System.out.println("Mrx Turn finished");
-			return bestEval;
+			return new Pair<Move, Integer> (bestMove,maxEval);
 		}
 
 		else {
 			Integer minEval = 9999;
-			Pair<Move, Integer> bestEval = new Pair<>(move,  minEval);
-			for (Move m: gs.getAvailableMoves()){
-				Pair<Move, Integer> eval = minimax(gs.advance(m), m, depth-1, true);
-				if (eval.right()< bestEval.right()){
-					bestEval = eval;
+			Move bestMove = gs.getAvailableMoves().asList().get(0);
+			for (Move newMove: gs.getAvailableMoves()){
+				//make a copy
+				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
+				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,depth-1);
+				if (currentEval.right() < minEval){
+					minEval = currentEval.right();
+					bestMove = currentEval.left();
 				}
-				copyState = constructGameState(gs);
 			}
-			return bestEval;
+			return new Pair<Move, Integer> (bestMove, minEval);
 		}
 	}
+
 
 
 	public Integer score(Board.GameState gameState, Integer destination) {
@@ -131,21 +132,21 @@ public class MyAi implements Ai {
 				Integer location  = board.getAvailableMoves().asList().get(0).source();
 				Player mrX = new Player(piece,ImmutableMap.copyOf(mrXTicketCount), location );
 				this.mrX = mrX;
-
 			}
 		}
 		// We shouldn't be making attributes for mr x and detectives, just return a pair.
 		this.detectives = detectives;
 	}
 
-	public Board.GameState constructGameState (Board board){
-		PseudoGameStateFactory factory = new PseudoGameStateFactory();
+
+	public MirrorGameState initialiseMirrorGameState(Board board){
+		//MirrorGameStateFactory factory = new MirrorGameStateFactory();
 		createPlayers(board);
 		Player mrX = this.mrX;
 		List detectives = this.detectives;
 		ImmutableList<LogEntry> log = board.getMrXTravelLog();
-		Board.GameState newState = factory.build(board.getSetup(), mrX, ImmutableList.copyOf(detectives));
-		return newState;
+
+		return new MirrorGameState(board.getSetup(), ImmutableSet.of(mrX.piece()), log, mrX, detectives );
 	}
 
 
@@ -155,24 +156,35 @@ public class MyAi implements Ai {
 
 		makeDistancesFW(board);
 
-		// Initialise a copy game state, which we can use to track positions during minimax
-		Board.GameState gameStateAtStartOfMove = constructGameState(board);
-		Pair<Move, Integer> bestMiniMax = new Pair (gameStateAtStartOfMove.getAvailableMoves().asList().get(0), 0);
+		int playersPlaying = board.getPlayers().size();
+		int depth = playersPlaying * 1;
 
-		// Iterate through possible moves and run minimax, store move sequence with the best possible move.
-		for (Move move: gameStateAtStartOfMove.getAvailableMoves()) {
-			// Depth used to be 7
-			Pair <Move, Integer> currentMiniMax = minimax(gameStateAtStartOfMove, move, 7, true);
-			if (currentMiniMax.right() > bestMiniMax.right()) {
-				bestMiniMax = currentMiniMax;
+		// Build a new game state, preserve is a copy, my is to run minimax on
+		//MirrorGameState myCurrentMirror = initialiseMirrorGameState(board);
+
+//		minimax(currentMirror, depth);
+
+
+		MirrorGameState preserveCurrentMirror = initialiseMirrorGameState(board);
+
+		Integer bestScore = 0;
+		Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
+		for (Move move: preserveCurrentMirror.getAvailableMoves()){
+			Pair<Move, Integer> newMiniMax = minimax(preserveCurrentMirror, move, depth);
+			if (newMiniMax.right() > bestScore) {
+				bestScore = newMiniMax.right();
+				bestMove = newMiniMax.left();
 			}
-			gameStateAtStartOfMove = constructGameState(board);
 		}
 
-		return bestMiniMax.left();
+		return bestMove;
 
-//		var moves = board.getAvailableMoves().asList();
-//		return moves.get(new Random().nextInt(moves.size()));
+
+
+
+		// var moves = board.getAvailableMoves().asList();
+		// Move myMove = moves.get(new Random().nextInt(moves.size()));
+		// return myMove;
 	}
 }
 

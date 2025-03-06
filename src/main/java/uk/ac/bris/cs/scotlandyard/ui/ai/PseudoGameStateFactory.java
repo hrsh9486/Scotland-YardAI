@@ -11,7 +11,7 @@ import java.util.*;
 
 public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.GameState> {
 
-    private final class PseudoGameState implements Board.GameState {
+    public final class PseudoGameState implements Board.GameState {
 
         // ATTRIBUTES
         /*----------------------------------------------------------------*/
@@ -19,7 +19,7 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
         private GameSetup setup;
 
         // Set of pieces that still have tickets (So can make a turn)
-        private ImmutableSet<Piece> remaining;
+        public ImmutableSet<Piece> remaining;
 
         // All the moves made by mrX
         private ImmutableList<LogEntry> log;
