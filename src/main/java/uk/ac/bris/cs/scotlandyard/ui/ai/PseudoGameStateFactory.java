@@ -10,6 +10,7 @@ import java.util.*;
 
 
 public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.GameState> {
+
     private final class PseudoGameState implements Board.GameState {
 
         // ATTRIBUTES
@@ -37,10 +38,10 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
 
         // Constructor
         private PseudoGameState(GameSetup setup,
-                            ImmutableSet<Piece> remaining,
-                            ImmutableList<LogEntry> log,
-                            Player mrX,
-                            List<Player> detectives
+                                ImmutableSet<Piece> remaining,
+                                ImmutableList<LogEntry> log,
+                                Player mrX,
+                                List<Player> detectives
         ) {
 
             // Validates Mr X parameter
@@ -460,4 +461,7 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
             ImmutableList<Player> detectives) {
         return new PseudoGameState(setup, ImmutableSet.of(Piece.MrX.MRX), ImmutableList.of(), mrX, detectives);
     }
+
 }
+
+
