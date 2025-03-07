@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.graph.ImmutableValueGraph;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
@@ -57,56 +58,95 @@ public class MyAi implements Ai {
 	}
 
 	@Nonnull @Override public String name() { return "Doofenshmirtz"; }
+	
+	// Optimisations:
+	// xremoveDoubleMoves - gets rid of double moves from the available moves
+	// removeNextToDetectiveMoves - gets rid of moves where mrX is placed next to a detective
+	// prioritiseDoubleMoves - if available moves is 0, then add the double moves in
+	// we can schedule/prioritise secret moves later
+	
+	public Pair<ArrayList<Move>, ArrayList<Move>> removeDoubleMoves(ImmutableSet<Move> moves) {
+		ArrayList<Move> movesToRemove = new ArrayList<>(moves);
+		ArrayList<Move> onlySingleMoves = new ArrayList<>();
+		ArrayList<Move> onlyDoubleMoves = new ArrayList<>();
+		for (Move m: movesToRemove){
+			Iterator<ScotlandYard.Ticket> ticketIterator = m.tickets().iterator();
+			List<ScotlandYard.Ticket> ticketList = Lists.newArrayList(ticketIterator);
+			if (!ticketList.contains(ScotlandYard.Ticket.DOUBLE)) {
+				onlySingleMoves.add(m);
+			}
+			else {
+				onlyDoubleMoves.add(m);
+			}
+		}
+		Pair<ArrayList<Move>, ArrayList<Move>> singleAndDoubleMoves= new Pair<>(onlySingleMoves,  onlyDoubleMoves);
+		return singleAndDoubleMoves;
+	}
 
-	public Pair<Move, Integer> minimax(MirrorGameState gs, Move move, Integer depth){
+	public Pair<Move, Integer> minimax(MirrorGameState gs, Move move, Integer alpha, Integer beta, Integer depth){
 
-		//We need to reassess this move.source() thing. Aside from that, miniMax works.
 		if (depth == 0){
-			System.out.println("Depth is 0");
-			System.out.println(new Pair<Move, Integer>(move, score(gs, gs.getMrX().location())));
 			return new Pair<Move, Integer>(move, score(gs, gs.getMrX().location()));
 		}
-		// (?) prolly need to add a condition if depth != 0 cos of the above the if statement
-		else if (depth % 6 == 0){
-			System.out.println();
+		// This is for the mrX (the maximising player)
+		else if (depth % 3 == 0){
+			if (!gs.getWinner().isEmpty()){
+				return new Pair<>(move, -9999);}
+
 			Integer maxEval = -9999;
-			Move bestMove = gs.getAvailableMoves().asList().get(0);
-			for (Move newMove: gs.getAvailableMoves()){
+
+			Pair<ArrayList<Move>, ArrayList<Move>> singleAndDoubleMoves = removeDoubleMoves(gs.getAvailableMoves());
+			ArrayList<Move> moves = singleAndDoubleMoves.left();
+			ArrayList<Move> onlyDoubleMoves = singleAndDoubleMoves.right();
+			Move bestMove = moves.get(0);
+			for (Move newMove: moves){
 				//make a copy
 				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
-				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,depth-1);
+				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,alpha, beta, depth-1);
 				if (currentEval.right()>maxEval){
 					maxEval = currentEval.right();
-					bestMove = currentEval.left();
+					bestMove = newMove;
 				}
+				alpha = max(alpha, currentEval.right());
+				if (beta<=alpha){break;}
 			}
 			return new Pair<Move, Integer> (bestMove,maxEval);
 		}
 
+		// This is for the detectives (the minimising players)
 		else {
+			if (!gs.getWinner().isEmpty()){
+				return new Pair<>(move, 9999);}
 			Integer minEval = 9999;
-			Move bestMove = gs.getAvailableMoves().asList().get(0);
-			for (Move newMove: gs.getAvailableMoves()){
-				//make a copy
+
+			Pair<ArrayList<Move>, ArrayList<Move>> singleAndDoubleMoves = removeDoubleMoves(gs.getAvailableMoves());
+			ArrayList<Move> moves = singleAndDoubleMoves.left();
+			ArrayList<Move> onlyDoubleMoves = singleAndDoubleMoves.right();
+			Move bestMove = moves.get(0);
+
+			for (Move newMove: moves){
+				//make a c() opy
 				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
-				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,depth-1);
+				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,alpha, beta, depth-1);
 				if (currentEval.right() < minEval){
 					minEval = currentEval.right();
-					bestMove = currentEval.left();
+					bestMove = newMove;
 				}
+				beta = min(beta, currentEval.right());
+				if (beta<=alpha){break;}
 			}
 			return new Pair<Move, Integer> (bestMove, minEval);
 		}
 	}
 
-
+	
 
 	public Integer score(Board.GameState gameState, Integer destination) {
-		Integer maxDistance = 0;
+		Integer minDistance = 9999;
 		for (Player p : detectives) {
-			maxDistance = max(maxDistance, distances.get(destination).get(p.location()));
+			minDistance = min(minDistance, distances.get(destination - 1 ).get(p.location()));
 		}
-		return maxDistance;
+		return minDistance;
 	}
 
 	public void createPlayers(Board board) {
@@ -148,7 +188,7 @@ public class MyAi implements Ai {
 
 		return new MirrorGameState(board.getSetup(), ImmutableSet.of(mrX.piece()), log, mrX, detectives );
 	}
-
+	
 
 	@Nonnull @Override public Move pickMove(
 			@Nonnull Board board,
@@ -158,7 +198,7 @@ public class MyAi implements Ai {
 
 		int playersPlaying = board.getPlayers().size();
 		int depth = playersPlaying * 1;
-
+		depth = 3;
 		// Build a new game state, preserve is a copy, my is to run minimax on
 		//MirrorGameState myCurrentMirror = initialiseMirrorGameState(board);
 
@@ -170,7 +210,7 @@ public class MyAi implements Ai {
 		Integer bestScore = 0;
 		Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
 		for (Move move: preserveCurrentMirror.getAvailableMoves()){
-			Pair<Move, Integer> newMiniMax = minimax(preserveCurrentMirror, move, depth);
+			Pair<Move, Integer> newMiniMax = minimax(preserveCurrentMirror, move, -9999,9999,  depth);
 			if (newMiniMax.right() > bestScore) {
 				bestScore = newMiniMax.right();
 				bestMove = newMiniMax.left();

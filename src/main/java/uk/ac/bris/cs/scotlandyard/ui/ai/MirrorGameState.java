@@ -80,7 +80,7 @@ public final class MirrorGameState implements Board.GameState {
         this.winner = setWinner();
 
         // Once a winner is established no more moves can be made.
-        if (!this.winner.isEmpty()) {this.moves = ImmutableSet.of();}
+        // if (!this.winner.isEmpty()) {this.moves = ImmutableSet.of();}
     }
 
     // 	Returns set of players that are still to make a move
