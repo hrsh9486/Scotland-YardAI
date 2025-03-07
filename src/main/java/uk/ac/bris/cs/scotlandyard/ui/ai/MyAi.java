@@ -60,11 +60,32 @@ public class MyAi implements Ai {
 	@Nonnull @Override public String name() { return "Doofenshmirtz"; }
 	
 	// Optimisations:
-	// xremoveDoubleMoves - gets rid of double moves from the available moves
-	// removeNextToDetectiveMoves - gets rid of moves where mrX is placed next to a detective
-	// prioritiseDoubleMoves - if available moves is 0, then add the double moves in
+	// (x) removeDoubleMoves - gets rid of double moves from the available moves
+	// ( ) removeNextToDetectiveMoves - gets rid of moves where mrX is placed next to a detective
+	// ( ) prioritiseDoubleMoves - if available moves is 0, then add the double moves in
+	// ( ) if there is a secret move and another move to a destination, prioritise secret move only
+	// .. if it's a reveal (so you can remove them)
+	// ( ) priority queue to prioritise stations and ferries
+	// ( ) secret move only if it's a reveal (force secret move on reveal)
+	// ( ) Stay away from corner nodes (unless they are stations), so we deprioritise them
+	// ( ) If there is a single move and a double move to the same location, use the single move (implement this in removeMoves)
+	// ( ) If the score is 3 or 4, then stop and take that score
 	// we can schedule/prioritise secret moves later
-	
+
+	// What's the point? getAvailableMoves returns a whole bunch of different moves, we want to
+	// give mrX a smaller set of moves that are actually useful
+//	public ArrayList<Move> prioritiseMoves(ImmutableSet<Move> moves) {
+//		// removeDoubleMoves
+//		// removeSecretMoves
+//		// use priority queue
+//		return new ImmutableList<Move>.of();
+//	}
+
+//	public ArrayList<Move> removeSecretMoves(ArrayList<Move> moves) {
+//
+//	}
+
+
 	public Pair<ArrayList<Move>, ArrayList<Move>> removeDoubleMoves(ImmutableSet<Move> moves) {
 		ArrayList<Move> movesToRemove = new ArrayList<>(moves);
 		ArrayList<Move> onlySingleMoves = new ArrayList<>();
@@ -86,19 +107,25 @@ public class MyAi implements Ai {
 	public Pair<Move, Integer> minimax(MirrorGameState gs, Move move, Integer alpha, Integer beta, Integer depth){
 
 		if (depth == 0){
+			System.out.println(score(gs, gs.getMrX().location()));
 			return new Pair<Move, Integer>(move, score(gs, gs.getMrX().location()));
 		}
 		// This is for the mrX (the maximising player)
 		else if (depth % 3 == 0){
+			// Base Case when we reach the furthest future game state we're considering.
 			if (!gs.getWinner().isEmpty()){
 				return new Pair<>(move, -9999);}
 
-			Integer maxEval = -9999;
 
+
+			// Maximising Mr X's distance from the players
+			Integer maxEval = -9999;
 			Pair<ArrayList<Move>, ArrayList<Move>> singleAndDoubleMoves = removeDoubleMoves(gs.getAvailableMoves());
 			ArrayList<Move> moves = singleAndDoubleMoves.left();
 			ArrayList<Move> onlyDoubleMoves = singleAndDoubleMoves.right();
 			Move bestMove = moves.get(0);
+
+			// Iterate through possible single moves that Mr X can take, and recursively assign a score.
 			for (Move newMove: moves){
 				//make a copy
 				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
@@ -106,10 +133,28 @@ public class MyAi implements Ai {
 				if (currentEval.right()>maxEval){
 					maxEval = currentEval.right();
 					bestMove = newMove;
+					if (maxEval>3){
+						return new Pair<>(bestMove, maxEval);
+					}
 				}
 				alpha = max(alpha, currentEval.right());
 				if (beta<=alpha){break;}
 			}
+			// If all single moves are bad, consider double moves.
+			if (maxEval<3){
+				for (Move newMove: onlyDoubleMoves){
+					//make a copy
+					MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
+					Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,alpha, beta, depth-1);
+					if (currentEval.right()>maxEval){
+						maxEval = currentEval.right();
+						bestMove = newMove;
+					}
+					alpha = max(alpha, currentEval.right());
+					if (beta<=alpha){break;}
+				}
+			}
+			System.out.println(maxEval);
 			return new Pair<Move, Integer> (bestMove,maxEval);
 		}
 
@@ -125,7 +170,7 @@ public class MyAi implements Ai {
 			Move bestMove = moves.get(0);
 
 			for (Move newMove: moves){
-				//make a c() opy
+				//make a copy
 				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
 				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,alpha, beta, depth-1);
 				if (currentEval.right() < minEval){
@@ -135,6 +180,7 @@ public class MyAi implements Ai {
 				beta = min(beta, currentEval.right());
 				if (beta<=alpha){break;}
 			}
+			System.out.println(minEval);
 			return new Pair<Move, Integer> (bestMove, minEval);
 		}
 	}
@@ -144,7 +190,7 @@ public class MyAi implements Ai {
 	public Integer score(Board.GameState gameState, Integer destination) {
 		Integer minDistance = 9999;
 		for (Player p : detectives) {
-			minDistance = min(minDistance, distances.get(destination - 1 ).get(p.location()));
+			minDistance = min(minDistance, distances.get(destination - 1 ).get(p.location()-1));
 		}
 		return minDistance;
 	}
@@ -202,7 +248,6 @@ public class MyAi implements Ai {
 		// Build a new game state, preserve is a copy, my is to run minimax on
 		//MirrorGameState myCurrentMirror = initialiseMirrorGameState(board);
 
-//		minimax(currentMirror, depth);
 
 
 		MirrorGameState preserveCurrentMirror = initialiseMirrorGameState(board);
@@ -227,11 +272,3 @@ public class MyAi implements Ai {
 		// return myMove;
 	}
 }
-
-// Our overall structure is good. To make this work, we need to address 3 things
-// 1. Our base case in Minimax evaluates score based on the relative position of all players to some detective.
-//	  We need to change this to be Mr X's position
-// 2. The pseudogamestate we're passing into minimax always has an empty log and its remaining always only has Mr X in it.
-//    We need to find a wat to access both of these attributes from board, and mirror their updates in our pseudo game state.
-// 3. Addressing the issue above, our current pseudo game state is encapsulated by the factory method, so we need to rewrite
-//    that class to get rid of the factory and instead just have a public pseudo game state.
