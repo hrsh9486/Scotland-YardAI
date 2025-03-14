@@ -1,6 +1,6 @@
  // Optimisations:
     // (x) splitDoubleMoves - gets rid of double moves from the available moves
-    // ( ) removeNextToDetectiveMoves - gets rid of moves where mrX is placed next to a detective
+    // (x) removeNextToDetectiveMoves - gets rid of moves where mrX is placed next to a detective
     // (x) prioritiseDoubleMoves - if available moves is 0, then add the double moves in
     // (x) if there is a secret move and another move to a destination, prioritise secret move only
     // .. if it's a reveal (so you can remove them)
