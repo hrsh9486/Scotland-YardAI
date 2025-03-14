@@ -147,4 +147,15 @@ public class UtilityHandler {
         return movesSplitUp;
     }
 
+    public ArrayList<Move> removeRedundantMoves(ArrayList<Move> moves) {
+       ArrayList<Move> noRedundants = new ArrayList<>();
+       ArrayList<Integer> visitedDestination = new ArrayList<>();
+
+//       for (Move move : moves) {
+//            move.
+//       }
+
+       return noRedundants;
+    }
+
 }

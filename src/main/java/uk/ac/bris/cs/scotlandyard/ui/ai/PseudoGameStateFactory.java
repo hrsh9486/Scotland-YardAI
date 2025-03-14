@@ -34,6 +34,10 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
 
         // A set of the winners (the detectives that lose might not be part of this?)
         private ImmutableSet<Piece> winner;
+
+        // A list of visted destinations by makeSingleMoves and makeDoubleMoves
+        public  ArrayList<Integer> visitedDestinations = new ArrayList<>();
+
         /*-----------------------------------------------------------------*/
 
         // Constructor
@@ -379,6 +383,9 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
             // mrX is on it.
             playerLocations.remove(mrX);
 
+            // This part is our own implementation, we're trying to get rid of redundant moves on our own from here
+            //ArrayList<Integer> visitedDestinations = new ArrayList<>();
+
             // We then iterate through all the adjacent nodes i.e. places the current player can go to
             for(int destination : setup.graph.adjacentNodes(source)) {
                 // Makes sure that the destination is not occupied.
@@ -388,14 +395,18 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
                     for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
                         // If the player has the necessary ticket, this move can be added to our set.
                         // if(player.tickets().get(ticket.requiredTicket()) > 0){
-                        if(player.has(ticket.requiredTicket())){
+                        System.out.println(visitedDestinations);
+                        // We are also making sure the destination hasn't been reached before
+                        if(player.has(ticket.requiredTicket()) & (!visitedDestinations.contains(destination))){
                             Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ticket.requiredTicket(), destination);
+                            visitedDestinations.add(destination);
+                            System.out.println("Added destination");
                             availableMoves.add(singleMove);
                         }
                     }
 
                     // If the player has a secret ticket, they can use this instead.
-                    if (player.has(ScotlandYard.Ticket.SECRET)) {
+                    if (player.has(ScotlandYard.Ticket.SECRET) & (!visitedDestinations.contains(destination))) {
                         Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
                         availableMoves.add(singleMove);
                     }
@@ -415,6 +426,9 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
 
             // Set containing all the valid first moves mrX can make from his initial position
             Set<Move.SingleMove> availableFirstMoves = makeSingleMoves(setup, detectives, mrX, source);
+
+            // This part is our own implementation, we're trying to get rid of redundant moves on our own from here
+            //ArrayList<Integer> visitedDestinations = new ArrayList<>();
 
             // Iterate through set of single moves, and check which moves are legal from the destination of the first move.
             for (Move.SingleMove move1 : availableFirstMoves) {
@@ -437,9 +451,12 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
                     // If he uses 2 different tickets then they need to have at least 1 of each
                     boolean enoughTicketsForDifferent =(move1.ticket != move2.ticket) && mrX.hasAtLeast(move1.ticket ,1) && mrX.hasAtLeast(move2.ticket, 1);
 
+                    // Check whether destination2 has already been visited
+                    boolean destinationNotVisited = (!visitedDestinations.contains(move2.destination));
 
                     // If all the above conditions are true, then it's a valid double move, and we can add it in
-                    if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent)) {
+                    if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent) && destinationNotVisited) {
+                        visitedDestinations.add(move2.destination);
                         availableMoves.add(new Move.DoubleMove(mrX.piece(), source, move1.ticket, move1.destination, move2.ticket ,move2.destination));
                     }
                 }
@@ -450,7 +467,6 @@ public final class PseudoGameStateFactory implements ScotlandYard.Factory<Board.
         public Integer getMrXLocation(){
             return mrX.location();
         }
-
 
     }
 

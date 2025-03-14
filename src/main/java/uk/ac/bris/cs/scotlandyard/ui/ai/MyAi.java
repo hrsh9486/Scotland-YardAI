@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.crypto.spec.PSource;
 
+import com.google.common.collect.Lists;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
 import static java.lang.Math.max;
@@ -14,20 +15,21 @@ import static java.lang.Math.min;
 public class MyAi implements Ai {
     ArrayList<ArrayList<Integer>> distances;
     ArrayList<Integer> connectivity;
-	Integer depth = 5;
+	Integer DEPTH = 6;
 
 	@Nonnull @Override public String name() { return "Doofenshmirtz"; }
 
     public Pair<Move, Double> minimax(MirrorGameState gs, Move move, Double alpha, Double beta, Integer depth){
         // Base Case, return static evaluation of board based on score function
         UtilityHandler utilityHandler = new UtilityHandler();
+        //System.out.println("Am i in? depth: " + depth);
         if (depth == 0){
-            // 	System.out.println("Depth: " + depth + " Score: " + score(gs, gs.getMrX().location()) + " Move: " + move);
+            //System.out.println("Score: " + score(gs, gs.getMrX().location()) + " Move: " + move);
             return new Pair<Move, Double>(move, score(gs, gs.getMrX().location()));
         }
 
         // This is for the mrX (the maximising player)
-        else if (depth % this.depth == 0){
+        else if (depth % this.DEPTH == 0){
             // Base cases when we reach the furthest future game state we're considering.
             if(gs.getWinner().contains(gs.getMrX())){
                 return new Pair<>(move, 9999.0);
@@ -41,6 +43,7 @@ public class MyAi implements Ai {
             // Split up moves into categories, to conserve secret and double moves. We really should make this a function
             ArrayList<Move> moves = new ArrayList<>(gs.getAvailableMoves());
             ArrayList<ArrayList<Move>> movesSplitUp = utilityHandler.splitMoves(moves);
+
 
             // If Mr X has no available moves, return negative score.
             if (moves.isEmpty()){ return new Pair<>(move, maxEval);}
@@ -85,7 +88,8 @@ public class MyAi implements Ai {
                 if (currentEval.right() > maxEval) {
                     maxEval = currentEval.right();
                     bestMove = newMove;
-                    if (maxEval > 4) {
+                    System.out.println("Internal scores found: " + maxEval);
+                    if (maxEval > 3) {
                         return new Pair<>(bestMove, maxEval);
                     }
                 }
@@ -148,10 +152,10 @@ public class MyAi implements Ai {
         }
 
         // Only consider connectivity if minDistance
-        if (minDistance < 4) {
-            int connectivity = this.connectivity.get(destination-1);
-            minDistance = (minDistance * 0.8) + (connectivity * 0.2);
-        }
+//        if (minDistance < 3) {
+//            int connectivity = this.connectivity.get(destination-1);
+//            minDistance = (minDistance * 0.8) + (connectivity * 0.2);
+//        }
         return minDistance;
     }
 
@@ -172,8 +176,13 @@ public class MyAi implements Ai {
 
         Integer bestScore = 0;
         Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
-        Pair<Move, Double>	bestMoveAndScore = minimax(preserveCurrentMirror, bestMove, -9999.0,9999.0,  this.depth);
-
+        System.out.println("Available moves: " + preserveCurrentMirror.getAvailableMoves());
+        System.out.println("Size of available moves: " + preserveCurrentMirror.getAvailableMoves().size());
+        Pair<Move, Double>	bestMoveAndScore = minimax(preserveCurrentMirror, bestMove, -9999.0,9999.0,  this.DEPTH);
+        System.out.println("Move: " + bestMoveAndScore.left() + " Score: " + bestMoveAndScore.right());
+        //System.out.println("Tickets: " + Lists.newArrayList(bestMoveAndScore.left().tickets().iterator()));
+        System.out.println("Tickets: " + bestMoveAndScore.left().commencedBy());
+        System.out.println("From" + bestMoveAndScore.left().source() + " Could have gone to: " + board.getSetup().graph.adjacentNodes(bestMoveAndScore.left().source()));
         return bestMoveAndScore.left();
     }
 }

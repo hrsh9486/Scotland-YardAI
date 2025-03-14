@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.*;
+import io.atlassian.fugue.Pair;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -31,6 +32,10 @@ public final class MirrorGameState implements Board.GameState {
 
     // A set of the winners (the detectives that lose might not be part of this?)
     private ImmutableSet<Piece> winner;
+
+    // A list of visted destinations by makeSingleMoves and makeDoubleMoves
+    public  ArrayList<Integer> visitedSingleDestinations = new ArrayList<>();
+
     /*-----------------------------------------------------------------*/
 
     // Constructor
@@ -294,7 +299,7 @@ public final class MirrorGameState implements Board.GameState {
         boolean mrXWin = false;
 
         // The following booleans are for checking if mrX is cornered
-        boolean mrXHasNoMoreMoves = makeSingleMoves(setup, detectives, mrX, mrX.location()).isEmpty();
+        boolean mrXHasNoMoreMoves = makeSingleMoves(setup, detectives, mrX, mrX.location()).left().isEmpty();
         boolean itIsMrXsTurn = remaining.contains(mrX.piece());
         boolean logFull = this.log.size() == setup.moves.size() && remaining.contains(mrX.piece());
 
@@ -329,7 +334,10 @@ public final class MirrorGameState implements Board.GameState {
 
         //If its MrX's turn, add all valid single and double moves to the set.
         if (remaining.contains(mrX.piece())){
-            Set<Move.SingleMove> availableMrXSingleMoves = makeSingleMoves(setup, detectives, mrX, mrX.location());
+            Pair<Set<Move.SingleMove>, ArrayList<Integer>> singleMovesAndDestinations= makeSingleMoves(setup, detectives, mrX, mrX.location());
+            Set<Move.SingleMove> availableMrXSingleMoves = singleMovesAndDestinations.left();
+            this.visitedSingleDestinations = singleMovesAndDestinations.right();
+            //Set<Move.SingleMove> availableMrXSingleMoves = makeSingleMoves(setup, detectives, mrX, mrX.location()).left();
             Set<Move.DoubleMove> availableMrXDoubleMoves = makeDoubleMove(setup, detectives, mrX, mrX.location());
             availableMoves.addAll(availableMrXSingleMoves);
             availableMoves.addAll(availableMrXDoubleMoves);
@@ -338,7 +346,7 @@ public final class MirrorGameState implements Board.GameState {
         //Add all players possible moves to the set.
         for (Player p: detectives) {
             if (remaining.contains(p.piece())){
-                Set<Move.SingleMove> availableDetectiveMoves = makeSingleMoves(setup, detectives, p, p.location());
+                Set<Move.SingleMove> availableDetectiveMoves = makeSingleMoves(setup, detectives, p, p.location()).left();
                 availableMoves.addAll(availableDetectiveMoves);
             }
         }
@@ -364,7 +372,7 @@ public final class MirrorGameState implements Board.GameState {
      * rather than it being accessible by all objects, since the moves that can be made are specific to a
      * particular configuration of pieces, which is described in that game state.
      */
-    Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
+    public Pair<Set<Move.SingleMove>, ArrayList<Integer>> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
         HashSet<Move.SingleMove> availableMoves = new  HashSet<>();
         // Get all the player locations to make sure the current player doesn't go on occupied squares
         Map<Player, Integer> playerLocations = getPlayerLocations();
@@ -372,6 +380,7 @@ public final class MirrorGameState implements Board.GameState {
         // We are removing mrX from the playerLocations because both the detectives and mrX can occupy this space, even if
         // mrX is on it.
         playerLocations.remove(mrX);
+        ArrayList<Integer> localVisitedDestinations = new ArrayList<>();
 
         // We then iterate through all the adjacent nodes i.e. places the current player can go to
         for(int destination : setup.graph.adjacentNodes(source)) {
@@ -382,40 +391,43 @@ public final class MirrorGameState implements Board.GameState {
                 for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
                     // If the player has the necessary ticket, this move can be added to our set.
                     // if(player.tickets().get(ticket.requiredTicket()) > 0){
-                    if(player.has(ticket.requiredTicket())){
+                    if(player.has(ticket.requiredTicket()) & (!localVisitedDestinations.contains(destination))){
                         Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ticket.requiredTicket(), destination);
                         availableMoves.add(singleMove);
+                        localVisitedDestinations.add(destination);
                     }
                 }
 
                 // If the player has a secret ticket, they can use this instead.
-                if (player.has(ScotlandYard.Ticket.SECRET)) {
+                if (player.has(ScotlandYard.Ticket.SECRET) & (!localVisitedDestinations.contains(destination))) {
                     Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
                     availableMoves.add(singleMove);
+                    localVisitedDestinations.add(destination);
                 }
             }
         }
-        return availableMoves;
+
+        return new Pair<>(availableMoves, localVisitedDestinations);
     }
 
     private Set<Move.DoubleMove> makeDoubleMove(GameSetup setup, List<Player> detectives, Player mrX, int source) {
         HashSet<Move.DoubleMove> availableMoves = new HashSet<>();
+        ArrayList<Integer> localVisitedDestinations = new ArrayList<>();
 
         // Algorithm (high level):
         // Use makeSingleMove and get all the valid adjacent nodes that MrX can move to -- (1)
         // Call the makeSingleMove function on every node from (1) and get all the valid single moves from there
         // Check these are valid in combination (No double use of the same tickets)
         // Store these moves in the availableMoves
-
+        //this.visitedDestinations.clear();
         // Set containing all the valid first moves mrX can make from his initial position
-        Set<Move.SingleMove> availableFirstMoves = makeSingleMoves(setup, detectives, mrX, source);
+        Set<Move.SingleMove> availableFirstMoves = makeSingleMoves(setup, detectives, mrX, source).left();
 
         // Iterate through set of single moves, and check which moves are legal from the destination of the first move.
         for (Move.SingleMove move1 : availableFirstMoves) {
             // Get all the valid move 2s by calling makeSingleMoves and setting move1 as the source
-            Set<Move.SingleMove> availableSecondMoves = makeSingleMoves(setup, detectives, mrX, move1.destination);
+            Set<Move.SingleMove> availableSecondMoves = makeSingleMoves(setup, detectives, mrX, move1.destination).left();
             // Iterate through each move2 to see whether it is actually a valid move or not
-
 
             for (Move.SingleMove move2 : availableSecondMoves) {
                 // Check whether mrX has enough double tickets
@@ -431,10 +443,15 @@ public final class MirrorGameState implements Board.GameState {
                 // If he uses 2 different tickets then they need to have at least 1 of each
                 boolean enoughTicketsForDifferent =(move1.ticket != move2.ticket) && mrX.hasAtLeast(move1.ticket ,1) && mrX.hasAtLeast(move2.ticket, 1);
 
-
+                // Check whether destination2 has already been visited
+                boolean destinationNotVisited = (!localVisitedDestinations.contains(move2.destination)) && !(this.visitedSingleDestinations.contains(move2.destination));
+                //System.out.println("In Double Moves: " + visitedDestinations);
                 // If all the above conditions are true, then it's a valid double move, and we can add it in
-                if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent)) {
+                if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent) && destinationNotVisited) {
+                    //System.out.println("Visited: " + visitedDestinations);
+                    localVisitedDestinations.add(move2.destination);
                     availableMoves.add(new Move.DoubleMove(mrX.piece(), source, move1.ticket, move1.destination, move2.ticket ,move2.destination));
+//                    System.out.println("3: " + this.visitedDestinations);
                 }
             }
         }
