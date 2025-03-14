@@ -2,12 +2,12 @@
     // (x) splitDoubleMoves - gets rid of double moves from the available moves
     // ( ) removeNextToDetectiveMoves - gets rid of moves where mrX is placed next to a detective
     // (x) prioritiseDoubleMoves - if available moves is 0, then add the double moves in
-    // ( ) if there is a secret move and another move to a destination, prioritise secret move only
+    // (x) if there is a secret move and another move to a destination, prioritise secret move only
     // .. if it's a reveal (so you can remove them)
     // ( ) priority queue to prioritise stations and ferries
-    // ( ) secret move only if it's a reveal (force secret move on reveal)
+    // (o) secret move only if it's a reveal (force secret move on reveal)
     // ( ) Stay away from corner nodes (unless they are stations), so we deprioritise them
-    // ( ) If there is a single move and a double move to the same location, use the single move (implement this in removeMoves)
+    // (x) If there is a single move and a double move to the same location, use the single move (implement this in removeMoves)
     // (x) If the score is 3 or 4, then stop and take that score
     // we can schedule/prioritise secret moves later
 

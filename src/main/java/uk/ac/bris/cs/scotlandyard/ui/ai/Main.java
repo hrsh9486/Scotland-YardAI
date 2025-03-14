@@ -8,3 +8,5 @@ public class Main {
 		uk.ac.bris.cs.scotlandyard.Main.main(args);
 	}
 }
+
+// ERROR FIX THE POTENTIAL DETECTIVE LOCATIONS

@@ -15,7 +15,7 @@ import static java.lang.Math.min;
 public class MyAi implements Ai {
     ArrayList<ArrayList<Integer>> distances;
     ArrayList<Integer> connectivity;
-	Integer DEPTH = 6;
+	Integer DEPTH = 100;
 
 	@Nonnull @Override public String name() { return "Doofenshmirtz"; }
 

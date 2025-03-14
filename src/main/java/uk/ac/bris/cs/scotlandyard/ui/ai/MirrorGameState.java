@@ -33,8 +33,11 @@ public final class MirrorGameState implements Board.GameState {
     // A set of the winners (the detectives that lose might not be part of this?)
     private ImmutableSet<Piece> winner;
 
-    // A list of visted destinations by makeSingleMoves and makeDoubleMoves
-    public  ArrayList<Integer> visitedSingleDestinations = new ArrayList<>();
+    // A list of visited destinations by makeSingleMoves and makeDoubleMoves
+    public ArrayList<Integer> visitedSingleDestinations = new ArrayList<>();
+
+    // A list of potential detective locations
+    public  ArrayList<Integer> potentialDetectiveLocations;
 
     /*-----------------------------------------------------------------*/
 
@@ -81,6 +84,7 @@ public final class MirrorGameState implements Board.GameState {
         this.log = log;
         this.mrX = mrX;
         this.detectives = detectives;
+        this.potentialDetectiveLocations = getDetectiveAdjacentNodes();
         this.moves = setAvailableMoves();
         this.winner = setWinner();
 
@@ -334,10 +338,14 @@ public final class MirrorGameState implements Board.GameState {
 
         //If its MrX's turn, add all valid single and double moves to the set.
         if (remaining.contains(mrX.piece())){
+
+            System.out.println("1: " + this.potentialDetectiveLocations);
             Pair<Set<Move.SingleMove>, ArrayList<Integer>> singleMovesAndDestinations= makeSingleMoves(setup, detectives, mrX, mrX.location());
-            Set<Move.SingleMove> availableMrXSingleMoves = singleMovesAndDestinations.left();
+//            System.out.println("Adjacent nodes: " + getDetectiveAdjacentNodes());
             this.visitedSingleDestinations = singleMovesAndDestinations.right();
+            Set<Move.SingleMove> availableMrXSingleMoves = singleMovesAndDestinations.left();
             //Set<Move.SingleMove> availableMrXSingleMoves = makeSingleMoves(setup, detectives, mrX, mrX.location()).left();
+            //UNCOMMENT THE DOUBLE MOVE STUFF
             Set<Move.DoubleMove> availableMrXDoubleMoves = makeDoubleMove(setup, detectives, mrX, mrX.location());
             availableMoves.addAll(availableMrXSingleMoves);
             availableMoves.addAll(availableMrXDoubleMoves);
@@ -391,7 +399,9 @@ public final class MirrorGameState implements Board.GameState {
                 for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
                     // If the player has the necessary ticket, this move can be added to our set.
                     // if(player.tickets().get(ticket.requiredTicket()) > 0){
-                    if(player.has(ticket.requiredTicket()) & (!localVisitedDestinations.contains(destination))){
+                    boolean notPotentialDetectiveLocation = (!this.potentialDetectiveLocations.contains(destination));
+                    //System.out.println("2: " + this.potentialDetectiveLocations);
+                    if(player.has(ticket.requiredTicket()) & (!localVisitedDestinations.contains(destination)) & notPotentialDetectiveLocation){
                         Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ticket.requiredTicket(), destination);
                         availableMoves.add(singleMove);
                         localVisitedDestinations.add(destination);
@@ -399,11 +409,17 @@ public final class MirrorGameState implements Board.GameState {
                 }
 
                 // If the player has a secret ticket, they can use this instead.
-                if (player.has(ScotlandYard.Ticket.SECRET) & (!localVisitedDestinations.contains(destination))) {
+                if (player.has(ScotlandYard.Ticket.SECRET) & (!localVisitedDestinations.contains(destination)) & (!this.potentialDetectiveLocations.contains(destination))) {
                     Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
                     availableMoves.add(singleMove);
                     localVisitedDestinations.add(destination);
                 }
+
+                // Adding the suicide node
+                int suicideDestination = this.potentialDetectiveLocations.get(0);
+                Move.SingleMove suicideMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, suicideDestination);
+                availableMoves.add(suicideMove);
+                localVisitedDestinations.add(suicideDestination);
             }
         }
 
@@ -445,9 +461,13 @@ public final class MirrorGameState implements Board.GameState {
 
                 // Check whether destination2 has already been visited
                 boolean destinationNotVisited = (!localVisitedDestinations.contains(move2.destination)) && !(this.visitedSingleDestinations.contains(move2.destination));
+
+                // Check whether a potential detective location is ignored
+                boolean destinationNotAPotentialDetectiveLocation = (!this.potentialDetectiveLocations.contains(move2.destination));
+
                 //System.out.println("In Double Moves: " + visitedDestinations);
                 // If all the above conditions are true, then it's a valid double move, and we can add it in
-                if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent) && destinationNotVisited) {
+                if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent) && destinationNotVisited && destinationNotAPotentialDetectiveLocation) {
                     //System.out.println("Visited: " + visitedDestinations);
                     localVisitedDestinations.add(move2.destination);
                     availableMoves.add(new Move.DoubleMove(mrX.piece(), source, move1.ticket, move1.destination, move2.ticket ,move2.destination));
@@ -477,6 +497,18 @@ public final class MirrorGameState implements Board.GameState {
         ArrayList players = new ArrayList(detectives);
         players.add(mrX);
         return ImmutableList.copyOf(players);
+    }
+
+    public ArrayList<Integer> getDetectiveAdjacentNodes() {
+        ArrayList<Integer> adjacentDetectiveNodes = new ArrayList<>();
+
+        for (Player detective: this.detectives) {
+            int detectiveLocation = detective.location();
+            Set<Integer> potentialDetectiveLocations = getSetup().graph.adjacentNodes(detectiveLocation);
+            adjacentDetectiveNodes.addAll(potentialDetectiveLocations);
+        }
+
+        return adjacentDetectiveNodes;
     }
 
 }
