@@ -29,11 +29,6 @@ public class MyAi implements Ai {
 
         // This is for the mrX (the maximising player)
         else if (depth % this.DEPTH == 0){
-            // Immediately return if Mr X wins
-            if(gs.getWinner().contains(gs.getMrX())){
-                return new Pair<>(move, 9999.0);
-            }
-
             // Maximising Mr X's distance from the players
             Double maxEval = -9999.0;
 
@@ -41,9 +36,6 @@ public class MyAi implements Ai {
             ArrayList<Move> moves = new ArrayList<>(gs.getAvailableMoves());
             ArrayList<ArrayList<Move>> movesSplitUp = utilityHandler.splitMoves(moves);
 
-
-            // If Mr X has no available moves, return negative score.
-            // if (moves.isEmpty()){ return new Pair<>(move, maxEval);}
             Move bestMove = moves.get(0);
 
             // Iterate through possible single moves that Mr X can take, and recursively assign a score.
