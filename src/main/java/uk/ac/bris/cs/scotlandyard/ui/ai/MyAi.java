@@ -17,8 +17,7 @@ import static java.lang.Math.min;
 
 public class MyAi implements Ai {
 	ArrayList<ArrayList<Integer>> distances;
-	ArrayList<Player> detectives;
-	Player mrX;
+    int DEPTH = 5;
 	ArrayList<Integer> connectivity;
 
 	// Returns a matrix storing the shortest path from every node to every other node, using
@@ -140,9 +139,9 @@ public class MyAi implements Ai {
 		}
 
 		// This is for the mrX (the maximising player)
-		else if (depth % 5 == 0){
+		else if (depth % this.DEPTH == 0){
 			// Base cases when we reach the furthest future game state we're considering.
-			if(gs.getWinner().contains(mrX)){
+			if(gs.getWinner().size() == 1){
 				return new Pair<>(move, 9999);
 			}
 			if (!gs.getWinner().isEmpty()){
@@ -262,9 +261,9 @@ public class MyAi implements Ai {
 	}
 
 	
-	public Integer score(Board.GameState gameState, Integer destination) {
+	public Integer score(MirrorGameState gameState, Integer destination) {
 		Integer minDistance = 9999;
-		for (Player p : detectives) {
+		for (Player p : gameState.getDetectives()) {
 			// Integer distance = distances.get(destination - 1 ).get(p.location()-1);
 			// Instead of just minimising the distance we want an actual score.
 			minDistance = min(minDistance, distances.get(destination - 1 ).get(p.location()-1));
@@ -276,9 +275,9 @@ public class MyAi implements Ai {
 	}
 
 	// We really should try and avoid having attributes within the class.
-	public void createPlayers(Board board) {
+	public ArrayList<Player> createPlayers(Board board) {
 		ImmutableSet<Piece> pieces = board.getPlayers();
-		ArrayList<Player> detectives = new ArrayList<>();
+		ArrayList<Player> players = new ArrayList<>();
 
 		for (Piece piece : pieces) {
 			if (piece.isDetective()){
@@ -289,7 +288,7 @@ public class MyAi implements Ai {
 				}
 
 				Integer location  = board.getDetectiveLocation((Piece.Detective) piece).orElse(-1);
-				detectives.add(new Player(piece, ImmutableMap.copyOf(playerTicketCount), location));
+				players.add(new Player(piece, ImmutableMap.copyOf(playerTicketCount), location));
 			}
 			else if (piece.isMrX()) {
 				HashMap<ScotlandYard.Ticket, Integer> mrXTicketCount = new HashMap<>();
@@ -298,21 +297,20 @@ public class MyAi implements Ai {
 				}
 				Integer location  = board.getAvailableMoves().asList().get(0).source();
 				Player mrX = new Player(piece,ImmutableMap.copyOf(mrXTicketCount), location );
-				this.mrX = mrX;
+                players.add(0, mrX);
 			}
 		}
 		// We shouldn't be making attributes for mr x and detectives, just return a pair.
-		this.detectives = detectives;
+        return players;
 	}
 
 
 	public MirrorGameState initialiseMirrorGameState(Board board){
 		//MirrorGameStateFactory factory = new MirrorGameStateFactory();
-		createPlayers(board);
-		Player mrX = this.mrX;
-		List detectives = this.detectives;
+		ArrayList<Player> players = createPlayers(board);
+		Player mrX = players.get(0);
+		List detectives = players.subList(1, players.size());
 		ImmutableList<LogEntry> log = board.getMrXTravelLog();
-
 		return new MirrorGameState(board.getSetup(), ImmutableSet.of(mrX.piece()), log, mrX, detectives );
 	}
 	
@@ -330,7 +328,7 @@ public class MyAi implements Ai {
 		int playersPlaying = board.getPlayers().size();
 		// We need to consider this
 		int depth = playersPlaying * 1;
-		depth = 5;
+		depth = this.DEPTH;
 		// Build a new game state, preserve is a copy, my is to run minimax on
 		//MirrorGameState myCurrentMirror = initialiseMirrorGameState(board);
 
