@@ -101,11 +101,11 @@ public class UtilityHandler {
         for (Move m : moves) {
             Iterator<ScotlandYard.Ticket> ticketIterator = m.tickets().iterator();
             List<ScotlandYard.Ticket> ticketList = Lists.newArrayList(ticketIterator);
-            if (!ticketList.contains(ScotlandYard.Ticket.SECRET)) {
-                notSecretMoves.add(m);
+            if (ticketList.contains(ScotlandYard.Ticket.SECRET)) {
+                onlySecretMoves.add(m);
             }
             else {
-                onlySecretMoves.add(m);
+                notSecretMoves.add(m);
             }
         }
         return new Pair<>(onlySecretMoves,  notSecretMoves);
@@ -118,11 +118,11 @@ public class UtilityHandler {
         for (Move m: moves){
             Iterator<ScotlandYard.Ticket> ticketIterator = m.tickets().iterator();
             List<ScotlandYard.Ticket> ticketList = Lists.newArrayList(ticketIterator);
-            if (!ticketList.contains(ScotlandYard.Ticket.DOUBLE)) {
-                onlySingleMoves.add(m);
+            if (ticketList.contains(ScotlandYard.Ticket.DOUBLE)) {
+                onlyDoubleMoves.add(m);
             }
             else {
-                onlyDoubleMoves.add(m);
+                onlySingleMoves.add(m);
             }
         }
         return new Pair<>(onlySingleMoves, onlyDoubleMoves);
