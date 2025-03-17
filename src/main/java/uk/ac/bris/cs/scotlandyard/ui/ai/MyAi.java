@@ -33,6 +33,7 @@ public class MyAi implements Ai {
 		else if (gs.getRemaining().contains(gs.getMrX().piece())){
 			// Base cases when we reach the furthest future game state we're considering.
 			if(gs.getWinner().size() == 1){
+				System.out.println("Mr X wins game on move " + move);
 				return new Pair<>(move, 9999);
 			}
 
@@ -42,6 +43,7 @@ public class MyAi implements Ai {
 			// Split up moves into categories, to conserve secret and double moves. We really should make this a function
 			ArrayList<Move> moves = new ArrayList<>(gs.getAvailableMoves());
 			if (moves.isEmpty()){
+				System.out.println("Moves is empty for Mr X on depth " + depth);
 				return new Pair<>(move, 9999);
 			}
 
@@ -86,6 +88,7 @@ public class MyAi implements Ai {
 					maxEval = currentEval.right();
 					bestMove = newMove;
 					if (maxEval > 4) {
+						System.out.println("Mr X found a move with score > 4");
 						return new Pair<>(bestMove, maxEval);
 					}
 				}
@@ -130,6 +133,7 @@ public class MyAi implements Ai {
 				if (newMove.commencedBy().equals(current)) {
 					// If there's a state where the detectives win, return it immediately
 					if (gs.getWinner().size() > 1) {
+						System.out.println("gs.getWinner().size() > 1" + move);
 						return new Pair<>(move, -9999);
 					}
 					//make a copy
@@ -138,6 +142,7 @@ public class MyAi implements Ai {
 					if (currentEval.right() < minEval) {
 						minEval = currentEval.right();
 						bestMove = newMove;
+						// System.out.println("Detective is maximising a move");
 					}
 					beta = min(beta, currentEval.right());
 					if (beta <= alpha) {
