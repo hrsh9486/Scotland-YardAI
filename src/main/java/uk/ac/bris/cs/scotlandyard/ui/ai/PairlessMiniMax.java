@@ -26,15 +26,12 @@ public class PairlessMiniMax implements Ai {
     public Integer score(MirrorGameState gameState, Integer destination) {
         Integer minDistance = 9999;
         for (Player p : gameState.getDetectives()) {
-            // Integer distance = distances.get(destination - 1 ).get(p.location()-1);
-            // Instead of just minimising the distance we want an actual score.
             minDistance = min(minDistance, distances.get(destination - 1 ).get(p.location()-1));
         }
-        // Only consider connectivity if minDistance
         return minDistance;
     }
 
-   public int minimax(MirrorGameState gs, Move move, Integer alpha, Integer beta, Integer depth){
+   public int minimax(MirrorGameState gs, Integer alpha, Integer beta, Integer depth){
         UtilityHandler utilityHandler = new UtilityHandler();
 
         // Base case for when we reach desired depth
@@ -57,7 +54,7 @@ public class PairlessMiniMax implements Ai {
             // Iterate through possible moves that Mr X can make in the current game state, and return minimax evaluation.
             for (Move newMove : movesSplitUp.get(0)) {
                 MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
-                int currentScore = minimax(copyState.advance(newMove), newMove, alpha, beta, depth - 1);
+                int currentScore = minimax(copyState.advance(newMove), alpha, beta, depth - 1);
                 if (currentScore > maxEval) {
                     bestMove = newMove;
                     maxEval = currentScore;
@@ -71,7 +68,7 @@ public class PairlessMiniMax implements Ai {
             if (maxEval < 3){
                 for (Move newMove : movesSplitUp.get(1)) {
                     MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
-                    int currentScore = minimax(copyState.advance(newMove), newMove, alpha, beta, depth - 1);
+                    int currentScore = minimax(copyState.advance(newMove), alpha, beta, depth - 1);
                     if (currentScore > maxEval) {
                         bestMove = newMove;
                         maxEval = currentScore;
@@ -107,7 +104,7 @@ public class PairlessMiniMax implements Ai {
                // Make sure we are only considering one detective at a time.
                if (newMove.commencedBy() == current){
                    MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
-                   int currentScore = minimax(copyState.advance(newMove), newMove, alpha, beta, depth - 1);
+                   int currentScore = minimax(copyState.advance(newMove), alpha, beta, depth - 1);
                    if (currentScore < minEval){
                        minEval = currentScore;
                    }
@@ -136,7 +133,7 @@ public class PairlessMiniMax implements Ai {
 
         Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
 
-        minimax(preserveCurrentMirror, bestMove, -9999,9999,  this.depth);
+        minimax(preserveCurrentMirror, -9999,9999,  this.depth);
 
         // Debugging
         System.out.println("Move: "+ this.bestMove);
