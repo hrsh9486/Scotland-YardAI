@@ -15,7 +15,7 @@ public class PairlessMiniMax implements Ai {
     ArrayList<ArrayList<Integer>> distances;
     Move bestMove;
     int bestScore;
-    int depth = 8;
+    int depth = 9;
 
     @Nonnull
     @Override

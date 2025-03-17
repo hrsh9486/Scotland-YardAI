@@ -352,10 +352,12 @@ public final class MirrorGameState implements Board.GameState {
         }
 
         //Add all players possible moves to the set.
-        for (Player p: detectives) {
-            if (remaining.contains(p.piece())){
-                Set<Move.SingleMove> availableDetectiveMoves = makeDetectiveSingleMoves(setup, detectives, p, p.location());
-                availableMoves.addAll(availableDetectiveMoves);
+        else {
+            for (Player p : detectives) {
+                if (remaining.contains(p.piece())) {
+                    Set<Move.SingleMove> availableDetectiveMoves = makeDetectiveSingleMoves(setup, detectives, p, p.location());
+                    availableMoves.addAll(availableDetectiveMoves);
+                }
             }
         }
 
@@ -392,7 +394,6 @@ public final class MirrorGameState implements Board.GameState {
                 // Iterates through every adjacent node (there are numerous ways of transport) to the current player's location.
                 for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
                     // If the player has the necessary ticket, this move can be added to our set.
-                    // if(player.tickets().get(ticket.requiredTicket()) > 0){
                     if(player.has(ticket.requiredTicket())){
                         Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ticket.requiredTicket(), destination);
                         availableMoves.add(singleMove);
@@ -401,7 +402,6 @@ public final class MirrorGameState implements Board.GameState {
 
             }
         }
-        //System.out.println("Inside detectiveSingleMoves moves: " + availableMoves);
         return availableMoves;
     }
 
@@ -504,7 +504,6 @@ public final class MirrorGameState implements Board.GameState {
                 }
             }
         }
-
         return availableMoves;
     }
 

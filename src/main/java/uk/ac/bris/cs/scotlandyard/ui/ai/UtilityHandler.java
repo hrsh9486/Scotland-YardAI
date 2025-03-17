@@ -90,7 +90,7 @@ public class UtilityHandler {
     public MirrorGameState initialiseMirrorGameState(Board board){
         ArrayList<Player> players = createPlayers(board);
         Player mrX = players.get(0);
-        List<Player> detectives = players.subList(1, players.size()-1);
+        List<Player> detectives = players.subList(1, players.size());
         ImmutableList<LogEntry> log = board.getMrXTravelLog();
         return new MirrorGameState(board.getSetup(), ImmutableSet.of(mrX.piece()), log, mrX, detectives );
     }
@@ -143,15 +143,5 @@ public class UtilityHandler {
         return movesSplitUp;
     }
 
-    public ArrayList<Move> removeRedundantMoves(ArrayList<Move> moves) {
-        ArrayList<Move> noRedundants = new ArrayList<>();
-        ArrayList<Integer> visitedDestination = new ArrayList<>();
-
-//       for (Move move : moves) {
-//            move.
-//       }
-
-        return noRedundants;
-    }
 
 }
