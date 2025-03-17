@@ -3,6 +3,7 @@ package uk.ac.bris.cs.scotlandyard.ui.ai;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
 
 import javax.annotation.Nonnull;
@@ -31,6 +32,13 @@ public final class MirrorGameState implements Board.GameState {
 
     // A set of the winners (the detectives that lose might not be part of this?)
     private ImmutableSet<Piece> winner;
+
+    // A list of visited destinations by makeSingleMoves
+    public ArrayList<Integer> visitedSingleDestinations = new ArrayList<>();
+
+    // A list of potential detective locations
+    public  ArrayList<Integer> potentialDetectiveLocations;
+
     /*-----------------------------------------------------------------*/
 
     // Constructor
@@ -76,6 +84,7 @@ public final class MirrorGameState implements Board.GameState {
         this.log = log;
         this.mrX = mrX;
         this.detectives = detectives;
+        this.potentialDetectiveLocations = getDetectiveAdjacentNodes();
         this.moves = setAvailableMoves();
         this.winner = setWinner();
 
@@ -295,7 +304,7 @@ public final class MirrorGameState implements Board.GameState {
         boolean mrXWin = false;
 
         // The following booleans are for checking if mrX is cornered
-        boolean mrXHasNoMoreMoves = makeSingleMoves(setup, detectives, mrX, mrX.location()).isEmpty();
+        boolean mrXHasNoMoreMoves = makeMrXSingleMoves(setup, detectives, mrX, mrX.location()).left().isEmpty();
         boolean itIsMrXsTurn = remaining.contains(mrX.piece());
         boolean logFull = this.log.size() == setup.moves.size() && remaining.contains(mrX.piece());
 
@@ -330,7 +339,13 @@ public final class MirrorGameState implements Board.GameState {
 
         //If its MrX's turn, add all valid single and double moves to the set.
         if (remaining.contains(mrX.piece())){
-            Set<Move.SingleMove> availableMrXSingleMoves = makeSingleMoves(setup, detectives, mrX, mrX.location());
+//            Set<Move.SingleMove> availableMrXSingleMoves = makeSingleMoves(setup, detectives, mrX, mrX.location());
+            // I'm adding the following from what i did earlier
+            Pair<Set<Move.SingleMove>, ArrayList<Integer>> singleMovesAndDestinations= makeMrXSingleMoves(setup, detectives, mrX, mrX.location());
+            this.visitedSingleDestinations = singleMovesAndDestinations.right();
+            Set<Move.SingleMove> availableMrXSingleMoves = singleMovesAndDestinations.left();
+
+
             Set<Move.DoubleMove> availableMrXDoubleMoves = makeDoubleMove(setup, detectives, mrX, mrX.location());
             availableMoves.addAll(availableMrXSingleMoves);
             availableMoves.addAll(availableMrXDoubleMoves);
@@ -339,7 +354,7 @@ public final class MirrorGameState implements Board.GameState {
         //Add all players possible moves to the set.
         for (Player p: detectives) {
             if (remaining.contains(p.piece())){
-                Set<Move.SingleMove> availableDetectiveMoves = makeSingleMoves(setup, detectives, p, p.location());
+                Set<Move.SingleMove> availableDetectiveMoves = makeDetectiveSingleMoves(setup, detectives, p, p.location());
                 availableMoves.addAll(availableDetectiveMoves);
             }
         }
@@ -351,33 +366,28 @@ public final class MirrorGameState implements Board.GameState {
 
 
     // Returns location of all players on the board in a map.
-    private ArrayList<Integer> getPlayerLocations() {
-        ArrayList<Integer> playerLocations = new ArrayList<>();
+    private Map<Player, Integer> getPlayerLocations() {
+        Map<Player, Integer> playerLocations = new HashMap<>();
         for  (Player p : detectives) {
-            playerLocations.add(p.location());
+            playerLocations.put(p, p.location());
         }
-        playerLocations.add(0, mrX.location());
+        playerLocations.put(mrX, mrX.location());
         return playerLocations;
     }
 
-    // (?) This method was static on GitHub, but we got rid of it
-    /* We did this, because we believe makeSingleMoves is a function called by a specific game state object
-     * rather than it being accessible by all objects, since the moves that can be made are specific to a
-     * particular configuration of pieces, which is described in that game state.
-     */
-    Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
+    public Set<Move.SingleMove> makeDetectiveSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
         HashSet<Move.SingleMove> availableMoves = new  HashSet<>();
         // Get all the player locations to make sure the current player doesn't go on occupied squares
-        ArrayList<Integer> playerLocations = getPlayerLocations();
+        Map<Player, Integer> playerLocations = getPlayerLocations();
         // If it is MrX's turn, we remove him from the playerLocations
         // We are removing mrX from the playerLocations because both the detectives and mrX can occupy this space, even if
         // mrX is on it.
-        playerLocations.remove(0);
+        playerLocations.remove(mrX);
 
         // We then iterate through all the adjacent nodes i.e. places the current player can go to
         for(int destination : setup.graph.adjacentNodes(source)) {
             // Makes sure that the destination is not occupied.
-            if (!(playerLocations.contains(destination))) {
+            if (!(playerLocations.containsValue(destination))) {
 
                 // Iterates through every adjacent node (there are numerous ways of transport) to the current player's location.
                 for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
@@ -389,18 +399,67 @@ public final class MirrorGameState implements Board.GameState {
                     }
                 }
 
-                // If the player has a secret ticket, they can use this instead.
-                if (player.has(ScotlandYard.Ticket.SECRET)) {
-                    Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
-                    availableMoves.add(singleMove);
-                }
             }
         }
+        //System.out.println("Inside detectiveSingleMoves moves: " + availableMoves);
         return availableMoves;
+    }
+
+
+    // (?) This method was static on GitHub, but we got rid of it
+    /* We did this, because we believe makeSingleMoves is a function called by a specific game state object
+     * rather than it being accessible by all objects, since the moves that can be made are specific to a
+     * particular configuration of pieces, which is described in that game state.
+     */
+    public Pair<Set<Move.SingleMove>, ArrayList<Integer>> makeMrXSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
+        HashSet<Move.SingleMove> availableMoves = new  HashSet<>();
+        // Get all the player locations to make sure the current player doesn't go on occupied squares
+        Map<Player, Integer> playerLocations = getPlayerLocations();
+        // If it is MrX's turn, we remove him from the playerLocations
+        // We are removing mrX from the playerLocations because both the detectives and mrX can occupy this space, even if
+        // mrX is on it.
+        playerLocations.remove(mrX);
+        ArrayList<Integer> localVisitedDestinations = new ArrayList<>();
+
+        // We then iterate through all the adjacent nodes i.e. places the current player can go to
+        for(int destination : setup.graph.adjacentNodes(source)) {
+            // Makes sure that the destination is not occupied.
+            if (!(playerLocations.containsValue(destination))) {
+
+                // Iterates through every adjacent node (there are numerous ways of transport) to the current player's location.
+                for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
+                    // If the player has the necessary ticket, this move can be added to our set.
+                    // if(player.tickets().get(ticket.requiredTicket()) > 0){
+                    boolean notPotentialDetectiveLocation = (!this.potentialDetectiveLocations.contains(destination));
+                    //System.out.println("2: " + this.potentialDetectiveLocations);
+                    if(player.has(ticket.requiredTicket()) & (!localVisitedDestinations.contains(destination)) & notPotentialDetectiveLocation){
+                        Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ticket.requiredTicket(), destination);
+                        availableMoves.add(singleMove);
+                        localVisitedDestinations.add(destination);
+                    }
+                }
+
+                // If the player has a secret ticket, they can use this instead.
+                if (player.has(ScotlandYard.Ticket.SECRET) & (!localVisitedDestinations.contains(destination)) & (!this.potentialDetectiveLocations.contains(destination))) {
+                    Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
+                    availableMoves.add(singleMove);
+                    localVisitedDestinations.add(destination);
+                }
+
+                // Adding the suicide node
+//                int suicideDestination = this.potentialDetectiveLocations.get(0);
+//                Move.SingleMove suicideMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, suicideDestination);
+//                availableMoves.add(suicideMove);
+//                localVisitedDestinations.add(suicideDestination);
+            }
+        }
+
+        return new Pair<>(availableMoves, localVisitedDestinations);
     }
 
     private Set<Move.DoubleMove> makeDoubleMove(GameSetup setup, List<Player> detectives, Player mrX, int source) {
         HashSet<Move.DoubleMove> availableMoves = new HashSet<>();
+        ArrayList<Integer> localVisitedDestinations = new ArrayList<>();
 
         // Algorithm (high level):
         // Use makeSingleMove and get all the valid adjacent nodes that MrX can move to -- (1)
@@ -409,12 +468,12 @@ public final class MirrorGameState implements Board.GameState {
         // Store these moves in the availableMoves
 
         // Set containing all the valid first moves mrX can make from his initial position
-        Set<Move.SingleMove> availableFirstMoves = makeSingleMoves(setup, detectives, mrX, source);
+        Set<Move.SingleMove> availableFirstMoves = makeMrXSingleMoves(setup, detectives, mrX, source).left();
 
         // Iterate through set of single moves, and check which moves are legal from the destination of the first move.
         for (Move.SingleMove move1 : availableFirstMoves) {
             // Get all the valid move 2s by calling makeSingleMoves and setting move1 as the source
-            Set<Move.SingleMove> availableSecondMoves = makeSingleMoves(setup, detectives, mrX, move1.destination);
+            Set<Move.SingleMove> availableSecondMoves = makeMrXSingleMoves(setup, detectives, mrX, move1.destination).left();
             // Iterate through each move2 to see whether it is actually a valid move or not
 
 
@@ -432,9 +491,15 @@ public final class MirrorGameState implements Board.GameState {
                 // If he uses 2 different tickets then they need to have at least 1 of each
                 boolean enoughTicketsForDifferent =(move1.ticket != move2.ticket) && mrX.hasAtLeast(move1.ticket ,1) && mrX.hasAtLeast(move2.ticket, 1);
 
+                // Check whether destination2 has already been visited
+                boolean destinationNotVisited = (!localVisitedDestinations.contains(move2.destination)) && !(this.visitedSingleDestinations.contains(move2.destination));
+
+                // Check whether a potential detective location is ignored
+                boolean destinationNotAPotentialDetectiveLocation = (!this.potentialDetectiveLocations.contains(move2.destination));
 
                 // If all the above conditions are true, then it's a valid double move, and we can add it in
-                if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent)) {
+                if (hasEnoughDoubleTickets && hasEnoughMovesForDouble && (enoughTicketsForSame || enoughTicketsForDifferent) && destinationNotVisited && destinationNotAPotentialDetectiveLocation) {
+                    localVisitedDestinations.add(move2.destination);
                     availableMoves.add(new Move.DoubleMove(mrX.piece(), source, move1.ticket, move1.destination, move2.ticket ,move2.destination));
                 }
             }
@@ -461,6 +526,18 @@ public final class MirrorGameState implements Board.GameState {
         ArrayList players = new ArrayList(detectives);
         players.add(mrX);
         return ImmutableList.copyOf(players);
+    }
+
+    public ArrayList<Integer> getDetectiveAdjacentNodes() {
+        ArrayList<Integer> adjacentDetectiveNodes = new ArrayList<>();
+
+        for (Player detective: this.detectives) {
+            int detectiveLocation = detective.location();
+            Set<Integer> potentialDetectiveLocations = getSetup().graph.adjacentNodes(detectiveLocation);
+            adjacentDetectiveNodes.addAll(potentialDetectiveLocations);
+        }
+
+        return adjacentDetectiveNodes;
     }
 
 }

@@ -15,7 +15,7 @@ public class PairlessMiniMax implements Ai {
     ArrayList<ArrayList<Integer>> distances;
     Move bestMove;
     int bestScore;
-    int depth = 9;
+    int depth = 8;
 
     @Nonnull
     @Override
@@ -68,7 +68,7 @@ public class PairlessMiniMax implements Ai {
                     break;
                 }
             }
-            if (maxEval < 2){
+            if (maxEval < 3){
                 for (Move newMove : movesSplitUp.get(1)) {
                     MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
                     int currentScore = minimax(copyState.advance(newMove), newMove, alpha, beta, depth - 1);
@@ -83,7 +83,12 @@ public class PairlessMiniMax implements Ai {
                     }
                 }
             }
-            this.bestMove = bestMove;
+            if (depth == this.depth) {
+                this.bestMove = bestMove;
+                this.bestScore = maxEval;
+            }
+            //this.bestMove = bestMove;
+            //this.bestScore = maxEval;
             return maxEval;
         }
 
@@ -126,9 +131,17 @@ public class PairlessMiniMax implements Ai {
         if (this.distances == null){this.distances = utilityHandler.floydWarshall(board);}
 
         MirrorGameState preserveCurrentMirror = utilityHandler.initialiseMirrorGameState(board);
+        System.out.println(" ");
+        System.out.println("Moves: " + preserveCurrentMirror.getAvailableMoves());
+
         Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
 
         minimax(preserveCurrentMirror, bestMove, -9999,9999,  this.depth);
+
+        // Debugging
+        System.out.println("Move: "+ this.bestMove);
+        System.out.println("Score: " + this.bestScore);
+
         return this.bestMove;
     }
 }
