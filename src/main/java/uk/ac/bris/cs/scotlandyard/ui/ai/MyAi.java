@@ -17,11 +17,9 @@ import static java.lang.Math.min;
 
 public class MyAi implements Ai {
 	ArrayList<ArrayList<Integer>> distances;
-    int DEPTH = 5;
-
+    int DEPTH = 9;
 
 	@Nonnull @Override public String name() { return "Doofenshmirtz"; }
-
 
 	public Pair<Move, Integer> minimax(MirrorGameState gs, Move move, Integer alpha, Integer beta, Integer depth){
         UtilityHandler utilityHandler = new UtilityHandler();
@@ -32,7 +30,7 @@ public class MyAi implements Ai {
 		}
 
 		// This is for the mrX (the maximising player)
-		else if (depth % this.DEPTH == 0){
+		else if (gs.getRemaining().contains(gs.getMrX().piece())){
 			// Base cases when we reach the furthest future game state we're considering.
 			if(gs.getWinner().size() == 1){
 				return new Pair<>(move, 9999);
@@ -43,16 +41,11 @@ public class MyAi implements Ai {
 
 			// Split up moves into categories, to conserve secret and double moves. We really should make this a function
 			ArrayList<Move> moves = new ArrayList<>(gs.getAvailableMoves());
-			Pair<ArrayList<Move>, ArrayList<Move>> secretAndNotSecretMoves = utilityHandler.splitSecretMoves(moves);
-			Pair<ArrayList<Move>, ArrayList<Move>> notSecretSingleAndDoubleMoves = utilityHandler.splitDoubleMoves(secretAndNotSecretMoves.right());
-			Pair<ArrayList<Move>, ArrayList<Move>> secretSingleAndDoubleMoves = utilityHandler.splitDoubleMoves(secretAndNotSecretMoves.left());
+			if (moves.isEmpty()){
+				return new Pair<>(move, 9999);
+			}
 
-			ArrayList<Move> pureSingleMoves = new ArrayList<>(notSecretSingleAndDoubleMoves.left());
-			ArrayList<Move> pureDoubleMoves = new ArrayList<>(notSecretSingleAndDoubleMoves.right());
-			ArrayList<Move> secretSingleMoves = new ArrayList<>(secretSingleAndDoubleMoves.left());
-			ArrayList<Move> secretDoubleMoves = new ArrayList<>(secretSingleAndDoubleMoves.right());
-
-
+			ArrayList<ArrayList<Move>> movesSplitUp = utilityHandler.splitMoves(moves);
 			Move bestMove = moves.get(0);
 			// Check if it's a reveal move, and if so, use a secret move
 //			if (!gs.getMrXTravelLog().isEmpty() && gs.getSetup().moves.get(gs.getMrXTravelLog().size() - 1)){
@@ -84,7 +77,7 @@ public class MyAi implements Ai {
 //			}
 
 			// Iterate through possible single moves that Mr X can take, and recursively assign a score.
-			for (Move newMove : pureSingleMoves) {
+			for (Move newMove : movesSplitUp.get(0)) {
 				// We have a significant amount of duplicate code here, address.
 				//make a copy
 				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
@@ -103,8 +96,8 @@ public class MyAi implements Ai {
 			}
 
 			// If all single moves are bad, consider double moves.
-			if (maxEval < 3) {
-				for (Move newMove : pureDoubleMoves) {
+			if (maxEval < 2) {
+				for (Move newMove : movesSplitUp.get(1)) {
 					//make a copy
 					MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
 					Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove, alpha, beta, depth - 1);
@@ -124,26 +117,33 @@ public class MyAi implements Ai {
 		// This is for the detectives (the minimising players)
 		else {
 			ArrayList<Move> moves = new ArrayList<>(gs.getAvailableMoves());
-			// If detectives have no available moves, return positive score
-			if (!gs.getWinner().isEmpty() || moves.isEmpty()){
+			// If detectives have no available moves, return positive score.
+			if (gs.getWinner().size() == 1 || moves.isEmpty()){
 				return new Pair<>(move, 9999);}
 			Integer minEval = 9999;
 
 			Move bestMove = moves.get(0);
+			Piece current  = bestMove.commencedBy();
 
 			for (Move newMove: moves){
-                // If there's a state where the detectives win, return it immediately
-                if (gs.getWinner().size() > 1){
-                    return new Pair<>(move, -9999);}
-                //make a copy
-				MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
-				Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove,alpha, beta, depth-1);
-				if (currentEval.right() < minEval){
-					minEval = currentEval.right();
-					bestMove = newMove;
+				// Ensures that for a given minimax depth, we only consider one player.
+				if (newMove.commencedBy().equals(current)) {
+					// If there's a state where the detectives win, return it immediately
+					if (gs.getWinner().size() > 1) {
+						return new Pair<>(move, -9999);
+					}
+					//make a copy
+					MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
+					Pair<Move, Integer> currentEval = minimax(copyState.advance(newMove), newMove, alpha, beta, depth - 1);
+					if (currentEval.right() < minEval) {
+						minEval = currentEval.right();
+						bestMove = newMove;
+					}
+					beta = min(beta, currentEval.right());
+					if (beta <= alpha) {
+						break;
+					}
 				}
-				beta = min(beta, currentEval.right());
-				if (beta<=alpha){break;}
 			}
 			return new Pair<Move, Integer> (bestMove, minEval);
 		}

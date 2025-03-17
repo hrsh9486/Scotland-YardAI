@@ -96,6 +96,7 @@ public final class MirrorGameState implements Board.GameState {
                 for (Integer number : detective.tickets().values()){
                     if (number>0){
                         detectiveHasATicket  =true;
+                        break;
                     }
                 }
                 if (detectiveHasATicket){
@@ -350,12 +351,12 @@ public final class MirrorGameState implements Board.GameState {
 
 
     // Returns location of all players on the board in a map.
-    private Map<Player, Integer> getPlayerLocations() {
-        Map<Player, Integer> playerLocations = new HashMap<>();
+    private ArrayList<Integer> getPlayerLocations() {
+        ArrayList<Integer> playerLocations = new ArrayList<>();
         for  (Player p : detectives) {
-            playerLocations.put(p, p.location());
+            playerLocations.add(p.location());
         }
-        playerLocations.put(mrX, mrX.location());
+        playerLocations.add(0, mrX.location());
         return playerLocations;
     }
 
@@ -367,16 +368,16 @@ public final class MirrorGameState implements Board.GameState {
     Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
         HashSet<Move.SingleMove> availableMoves = new  HashSet<>();
         // Get all the player locations to make sure the current player doesn't go on occupied squares
-        Map<Player, Integer> playerLocations = getPlayerLocations();
+        ArrayList<Integer> playerLocations = getPlayerLocations();
         // If it is MrX's turn, we remove him from the playerLocations
         // We are removing mrX from the playerLocations because both the detectives and mrX can occupy this space, even if
         // mrX is on it.
-        playerLocations.remove(mrX);
+        playerLocations.remove(0);
 
         // We then iterate through all the adjacent nodes i.e. places the current player can go to
         for(int destination : setup.graph.adjacentNodes(source)) {
             // Makes sure that the destination is not occupied.
-            if (!(playerLocations.containsValue(destination))) {
+            if (!(playerLocations.contains(destination))) {
 
                 // Iterates through every adjacent node (there are numerous ways of transport) to the current player's location.
                 for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
