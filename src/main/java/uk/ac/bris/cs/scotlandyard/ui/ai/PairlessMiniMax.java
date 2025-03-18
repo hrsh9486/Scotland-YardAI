@@ -15,7 +15,7 @@ public class PairlessMiniMax implements Ai {
     ArrayList<ArrayList<Integer>> distances;
     Move bestMove;
     int bestScore;
-    int depth = 9;
+    int depth = 8;
 
     @Nonnull
     @Override
@@ -50,9 +50,13 @@ public class PairlessMiniMax implements Ai {
             }
 
             ArrayList<Move> moves = new ArrayList<>(gs.getAvailableMoves());
+            if (moves.isEmpty()){
+                return -9999;
+            }
+
             ArrayList<ArrayList<Move>> movesSplitUp = utilityHandler.splitMoves(moves);
             int maxEval = -9999;
-            Move bestMove = null;
+            Move bestMove = moves.get(0);
 
             // Iterate through possible moves that Mr X can make in the current game state, and return minimax evaluation.
             for (Move newMove : movesSplitUp.get(0)) {
