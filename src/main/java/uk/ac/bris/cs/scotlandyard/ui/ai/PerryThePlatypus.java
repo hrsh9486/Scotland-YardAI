@@ -21,7 +21,7 @@ public class PerryThePlatypus implements Ai {
     @Nonnull
     @Override
     public String name() {
-        return "Perry";
+        return "Perry the platypus";
     }
 
     public Integer score(MirrorGameState gameState, Integer destination) {
@@ -48,31 +48,31 @@ public class PerryThePlatypus implements Ai {
         this.lastKnownMrXPosition = board.getMrXTravelLog().get(this.round - 1).location().orElse(this.lastKnownMrXPosition);
         ArrayList<Move> moves = new ArrayList<>(board.getAvailableMoves());
         Move bestMove = moves.get(new Random().nextInt(moves.size()));
+        TypeCheckVisitor typeCheckVisitor = new TypeCheckVisitor();
+
 
         if (lastKnownMrXPosition == -1) {
             // Try to spread out as much as we can
             int bestScore = 0;
             for (Move move : moves) {
-                int newScore = score(preserveCurrentMirror, move.destination);
+                int newScore = score(preserveCurrentMirror, (int) move.accept(typeCheckVisitor));
                 if (newScore > bestScore) {
                     bestMove = move;
                     bestScore = newScore;
                 }
             }
-            System.out.println("Dunno where he is");
         }
 
         else {
             int bestScore = 9999;
             for (Move move : moves) {
-                int currentScore = distances.get(lastKnownMrXPosition).get(move.destination);
+                int currentScore = distances.get(lastKnownMrXPosition -1).get((int) move.accept(typeCheckVisitor) -1);
                 if (currentScore < bestScore) {
                     bestMove = move;
                     bestScore = currentScore;
                     // if the move's destination takes is what takes us closest to the player, then do it.
                     // use a score function opposite to our minimax implementation.
                 }
-                System.out.println("His last known position is " + lastKnownMrXPosition);
             }
         }
         return bestMove;

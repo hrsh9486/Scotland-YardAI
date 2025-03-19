@@ -105,6 +105,9 @@ public class PairlessMiniMax implements Ai {
 //           }
            int minEval = 9999;
            ArrayList<Move> moves = new ArrayList(gs.getAvailableMoves());
+           if (moves.isEmpty()){
+               return 9999;
+           }
            Piece current = moves.get(0).commencedBy();
 
            for (Move newMove: moves){
