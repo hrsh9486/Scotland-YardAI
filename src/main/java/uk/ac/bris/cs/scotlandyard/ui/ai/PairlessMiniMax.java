@@ -15,22 +15,20 @@ public class PairlessMiniMax implements Ai {
     ArrayList<ArrayList<Integer>> distances;
     Move bestMove;
     int bestScore;
-    int depth = 8;
+    int depth = 7;
 
     @Nonnull
     @Override
     public String name() {
-        return "New Doofenshmirtz";
+        return "Doofenshmirtz";
     }
 
+    // Returns the distance between Mr X and the closest detective to him.
     public Integer score(MirrorGameState gameState, Integer destination) {
         Integer minDistance = 9999;
         for (Player p : gameState.getDetectives()) {
-            // Integer distance = distances.get(destination - 1 ).get(p.location()-1);
-            // Instead of just minimising the distance we want an actual score.
             minDistance = min(minDistance, distances.get(destination - 1 ).get(p.location()-1));
         }
-        // Only consider connectivity if minDistance
         return minDistance;
     }
 
@@ -50,13 +48,14 @@ public class PairlessMiniMax implements Ai {
             }
 
             ArrayList<Move> moves = new ArrayList<>(gs.getAvailableMoves());
+            // Return high score if Mr X wins in current game state
             if (moves.isEmpty()){
                 return -9999;
             }
 
+            Move bestMove = moves.get(0);
             ArrayList<ArrayList<Move>> movesSplitUp = utilityHandler.splitMoves(moves);
             int maxEval = -9999;
-            Move bestMove = moves.get(0);
 
             // Iterate through possible moves that Mr X can make in the current game state, and return minimax evaluation.
             for (Move newMove : movesSplitUp.get(0)) {
@@ -67,7 +66,6 @@ public class PairlessMiniMax implements Ai {
                     maxEval = currentScore;
                 }
                 alpha = max(alpha, maxEval);
-                // ADD CONDITION WHERE HE AUTOMATICALLY TAKES A MOVE IF SCORE IS ABOVE 4
                 if (beta <= alpha) {
                     break;
                 }
@@ -81,7 +79,6 @@ public class PairlessMiniMax implements Ai {
                         maxEval = currentScore;
                     }
                     alpha = max(alpha, maxEval);
-                    // ADD CONDITION WHERE HE AUTOMATICALLY TAKES A MOVE IF SCORE IS ABOVE 4
                     if (beta <= alpha) {
                         break;
                     }
@@ -91,18 +88,12 @@ public class PairlessMiniMax implements Ai {
                 this.bestMove = bestMove;
                 this.bestScore = maxEval;
             }
-            //this.bestMove = bestMove;
-            //this.bestScore = maxEval;
             return maxEval;
         }
 
         // Minimising Player (Detectives)
 
        else{
-           // If game state has a detective win, return with negative score.
-//           if (!gs.getWinner().contains(gs.getMrX().piece()) && !gs.getWinner().isEmpty()) {
-//               return -9999;
-//           }
            int minEval = 9999;
            ArrayList<Move> moves = new ArrayList(gs.getAvailableMoves());
            if (moves.isEmpty()){
@@ -138,16 +129,15 @@ public class PairlessMiniMax implements Ai {
         if (this.distances == null){ this.distances = utilityHandler.floydWarshall(board);}
 
         MirrorGameState preserveCurrentMirror = utilityHandler.initialiseMirrorGameState(board);
-        // System.out.println(" ");
-        // System.out.println("Moves: " + preserveCurrentMirror.getAvailableMoves());
 
+        // NB THIS IS THROWING ERRORS ON OCASSION, IE. THE GAME ISN'T OVER BUT OUR GETAVAILABLEMOVES THINKS THERE ARE NO MOVES
+        // THIS SUGGESTS WE'VE OVER PRUNED THE GAME TREE IN SOME STATES.
         Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
 
-        minimax(preserveCurrentMirror, bestMove, -9999,9999,  this.depth);
 
-        // Debugging
-        // System.out.println("Move: "+ this.bestMove);
-        // System.out.println("Score: " + this.bestScore);
+
+
+        minimax(preserveCurrentMirror, bestMove, -9999,9999,  this.depth);
 
         return this.bestMove;
     }

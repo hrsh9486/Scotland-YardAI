@@ -19,7 +19,7 @@ public class MyAi implements Ai {
 	ArrayList<ArrayList<Integer>> distances;
     int DEPTH = 9;
 
-	@Nonnull @Override public String name() { return "Doofenshmirtz"; }
+	@Nonnull @Override public String name() { return "Old Doofenshmirtz (Defunct)"; }
 
 	public Pair<Move, Integer> minimax(MirrorGameState gs, Move move, Integer alpha, Integer beta, Integer depth){
         UtilityHandler utilityHandler = new UtilityHandler();
