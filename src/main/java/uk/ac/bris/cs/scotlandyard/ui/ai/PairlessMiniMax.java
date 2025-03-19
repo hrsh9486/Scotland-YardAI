@@ -1,5 +1,6 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
@@ -15,7 +16,7 @@ public class PairlessMiniMax implements Ai {
     ArrayList<ArrayList<Integer>> distances;
     Move bestMove;
     int bestScore;
-    int depth = 8;
+    int depth = 7;
 
     @Nonnull
     @Override
@@ -73,6 +74,7 @@ public class PairlessMiniMax implements Ai {
                 }
             }
             if (maxEval < 3){
+                //System.out.println("I'm considereing a double move: ");
                 for (Move newMove : movesSplitUp.get(1)) {
                     MirrorGameState copyState = new MirrorGameState(gs.getSetup(), gs.getRemaining(), gs.getMrXTravelLog(), gs.getMrX(), gs.getDetectives());
                     int currentScore = minimax(copyState.advance(newMove), newMove, alpha, beta, depth - 1);
@@ -138,16 +140,20 @@ public class PairlessMiniMax implements Ai {
         if (this.distances == null){ this.distances = utilityHandler.floydWarshall(board);}
 
         MirrorGameState preserveCurrentMirror = utilityHandler.initialiseMirrorGameState(board);
-        // System.out.println(" ");
-        // System.out.println("Moves: " + preserveCurrentMirror.getAvailableMoves());
+        ArrayList<Move> moves =  new ArrayList<>(preserveCurrentMirror.getAvailableMoves());
+        System.out.println(" ");
+        System.out.println("Moves: " + moves);
+        ArrayList<ArrayList<Move>> movesSplitUp = utilityHandler.splitMoves(moves);
+        System.out.println("Single Moves: " + movesSplitUp.get(0));
+        System.out.println("Double Moves: " + movesSplitUp.get(1));
 
         Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
 
         minimax(preserveCurrentMirror, bestMove, -9999,9999,  this.depth);
 
         // Debugging
-        // System.out.println("Move: "+ this.bestMove);
-        // System.out.println("Score: " + this.bestScore);
+        System.out.println("Move: "+ this.bestMove);
+        System.out.println("Score: " + this.bestScore);
 
         return this.bestMove;
     }

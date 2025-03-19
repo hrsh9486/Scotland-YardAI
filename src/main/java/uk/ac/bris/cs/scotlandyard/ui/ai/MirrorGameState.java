@@ -420,6 +420,7 @@ public final class MirrorGameState implements Board.GameState {
         // mrX is on it.
         playerLocations.remove(mrX);
         ArrayList<Integer> localVisitedDestinations = new ArrayList<>();
+        int gameOverNodeCount = 0;
 
         // We then iterate through all the adjacent nodes i.e. places the current player can go to
         for(int destination : setup.graph.adjacentNodes(source)) {
@@ -440,10 +441,17 @@ public final class MirrorGameState implements Board.GameState {
                 }
 
                 // If the player has a secret ticket, they can use this instead.
-                if (player.has(ScotlandYard.Ticket.SECRET) & (!localVisitedDestinations.contains(destination)) & (!this.potentialDetectiveLocations.contains(destination))) {
-                    Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
-                    availableMoves.add(singleMove);
-                    localVisitedDestinations.add(destination);
+                if (player.has(ScotlandYard.Ticket.SECRET)) {
+                    if (gameOverNodeCount == 0) {
+                        Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
+                        availableMoves.add(singleMove);
+                        gameOverNodeCount++;
+                    }
+                    else if (gameOverNodeCount > 0 & (!localVisitedDestinations.contains(destination)) & (!this.potentialDetectiveLocations.contains(destination))) {
+                        Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination);
+                        availableMoves.add(singleMove);
+                        localVisitedDestinations.add(destination);
+                    }
                 }
 
                 // Adding the suicide node
