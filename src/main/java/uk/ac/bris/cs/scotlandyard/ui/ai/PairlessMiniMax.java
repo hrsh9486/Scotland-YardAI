@@ -1,5 +1,6 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
@@ -129,15 +130,16 @@ public class PairlessMiniMax implements Ai {
         if (this.distances == null){ this.distances = utilityHandler.floydWarshall(board);}
 
         MirrorGameState preserveCurrentMirror = utilityHandler.initialiseMirrorGameState(board);
+        // System.out.println(" ");
+        // System.out.println("Moves: " + preserveCurrentMirror.getAvailableMoves());
 
-        // NB THIS IS THROWING ERRORS ON OCASSION, IE. THE GAME ISN'T OVER BUT OUR GETAVAILABLEMOVES THINKS THERE ARE NO MOVES
-        // THIS SUGGESTS WE'VE OVER PRUNED THE GAME TREE IN SOME STATES.
         Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
 
-
-
-
         minimax(preserveCurrentMirror, bestMove, -9999,9999,  this.depth);
+
+        // Debugging
+        // System.out.println("Move: "+ this.bestMove);
+        // System.out.println("Score: " + this.bestScore);
 
         return this.bestMove;
     }
