@@ -87,6 +87,7 @@ public class UtilityHandler {
         return players;
     }
 
+    // Returns a copy of a game state based on information about the board.
     public MirrorGameState initialiseMirrorGameState(Board board){
         ArrayList<Player> players = createPlayers(board);
         Player mrX = players.get(0);
@@ -94,6 +95,9 @@ public class UtilityHandler {
         ImmutableList<LogEntry> log = board.getMrXTravelLog();
         return new MirrorGameState(board.getSetup(), ImmutableSet.of(mrX.piece()), log, mrX, detectives );
     }
+
+
+    // Splits up a set of moves into secret and not secret.
     public Pair<ArrayList<Move>, ArrayList<Move>> splitSecretMoves(ArrayList<Move> moves) {
         ArrayList<Move> onlySecretMoves = new ArrayList<>();
         ArrayList<Move> notSecretMoves = new ArrayList<>();
@@ -128,6 +132,7 @@ public class UtilityHandler {
         return new Pair<>(onlySingleMoves, onlyDoubleMoves);
     }
 
+    // Wrapper method to fully split moves into all categories.
     public ArrayList<ArrayList<Move>> splitMoves(ArrayList<Move> moves){
 
         Pair<ArrayList<Move>, ArrayList<Move>> secretAndNotSecretMoves = splitSecretMoves(moves);

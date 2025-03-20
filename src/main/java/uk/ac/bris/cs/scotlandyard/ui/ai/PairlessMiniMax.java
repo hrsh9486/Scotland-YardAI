@@ -130,16 +130,9 @@ public class PairlessMiniMax implements Ai {
         if (this.distances == null){ this.distances = utilityHandler.floydWarshall(board);}
 
         MirrorGameState preserveCurrentMirror = utilityHandler.initialiseMirrorGameState(board);
-        // System.out.println(" ");
-        // System.out.println("Moves: " + preserveCurrentMirror.getAvailableMoves());
-
         Move bestMove = preserveCurrentMirror.getAvailableMoves().asList().get(0);
-
         minimax(preserveCurrentMirror, bestMove, -9999,9999,  this.depth);
 
-        // Debugging
-        // System.out.println("Move: "+ this.bestMove);
-        // System.out.println("Score: " + this.bestScore);
 
         return this.bestMove;
     }

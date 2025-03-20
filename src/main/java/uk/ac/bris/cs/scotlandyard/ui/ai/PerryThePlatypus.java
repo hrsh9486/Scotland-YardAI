@@ -24,6 +24,7 @@ public class PerryThePlatypus implements Ai {
         return "Perry the platypus";
     }
 
+    // Returns distance between input position and closest detective.
     public Integer score(MirrorGameState gameState, Integer destination) {
         Integer minDistance = 9999;
         for (Player p : gameState.getDetectives()) {
@@ -52,7 +53,7 @@ public class PerryThePlatypus implements Ai {
 
 
         if (lastKnownMrXPosition == -1) {
-            // Try to spread out as much as we can
+            // Try to spread out as much as possible
             int bestScore = 0;
             for (Move move : moves) {
                 int newScore = score(preserveCurrentMirror, (int) move.accept(typeCheckVisitor));
@@ -64,14 +65,13 @@ public class PerryThePlatypus implements Ai {
         }
 
         else {
+            // If Mr X's position is revealed, take move which minimises distance between detectives and Mr X.
             int bestScore = 9999;
             for (Move move : moves) {
                 int currentScore = distances.get(lastKnownMrXPosition -1).get((int) move.accept(typeCheckVisitor) -1);
                 if (currentScore < bestScore) {
                     bestMove = move;
                     bestScore = currentScore;
-                    // if the move's destination takes is what takes us closest to the player, then do it.
-                    // use a score function opposite to our minimax implementation.
                 }
             }
         }
