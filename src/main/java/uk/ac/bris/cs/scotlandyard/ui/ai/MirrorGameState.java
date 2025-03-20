@@ -421,6 +421,7 @@ public final class MirrorGameState implements Board.GameState {
         playerLocations.remove(mrX);
         ArrayList<Integer> localVisitedDestinations = new ArrayList<>();
         int gameOverNodeCount = 0;
+        boolean atleastOne = false;
 
         // We then iterate through all the adjacent nodes i.e. places the current player can go to
         for(int destination : setup.graph.adjacentNodes(source)) {
@@ -430,7 +431,15 @@ public final class MirrorGameState implements Board.GameState {
                 // Iterates through every adjacent node (there are numerous ways of transport) to the current player's location.
                 for (ScotlandYard.Transport ticket : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
                     // If the player has the necessary ticket, this move can be added to our set.
-                    // if(player.tickets().get(ticket.requiredTicket()) > 0){
+
+                    if (!atleastOne) {
+                        if(player.has(ticket.requiredTicket()) & (!localVisitedDestinations.contains(destination))) {
+                            Move.SingleMove singleMove = new Move.SingleMove(player.piece(), source, ticket.requiredTicket(), destination);
+                            availableMoves.add(singleMove);
+                        }
+                        atleastOne = true;
+                    }
+
                     boolean notPotentialDetectiveLocation = (!this.potentialDetectiveLocations.contains(destination));
                     //System.out.println("2: " + this.potentialDetectiveLocations);
                     if(player.has(ticket.requiredTicket()) & (!localVisitedDestinations.contains(destination)) & notPotentialDetectiveLocation){
